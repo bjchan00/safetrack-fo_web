@@ -3,6 +3,8 @@ import "./globals.css";
 import { getSession } from "@/lib/auth";
 import { NavHeader } from "@/components/layout/NavHeader";
 import { ToastContainer } from "@/components/ui/Toast";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "SafeTrack — 가족 위치 공유 서비스",
@@ -18,6 +20,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ToastContainer />
         <NavHeader member={member} />
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

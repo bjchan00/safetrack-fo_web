@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { MapPin, ChevronDown, Menu, X } from "lucide-react";
+import { MapPin, ChevronDown, Menu, X, Bell } from "lucide-react";
 import type { SessionMember } from "@/lib/auth";
 
 interface NavHeaderProps {
@@ -11,18 +11,19 @@ interface NavHeaderProps {
 }
 
 const SUPPORT_MENU = [
-  { href: "/support/notices", label: "공지사항" },
-  { href: "/support/events", label: "이벤트" },
-  { href: "/support/qa", label: "Q&A" },
-  { href: "/support/inquiry", label: "1:1문의" },
+  { href: "/support/notices",  label: "공지사항" },
+  { href: "/support/events",   label: "이벤트"   },
+  { href: "/support/qa",       label: "Q&A"      },
+  { href: "/support/inquiry",  label: "1:1문의"  },
 ];
 
 const MYPAGE_MENU = [
-  { href: "/mypage/dashboard", label: "대시보드" },
-  { href: "/mypage/group", label: "그룹관리" },
-  { href: "/mypage/subscription", label: "구독관리" },
-  { href: "/mypage/inquiry", label: "1:1문의" },
-  { href: "/mypage/account", label: "계정" },
+  { href: "/mypage/dashboard",     label: "대시보드" },
+  { href: "/mypage/group",         label: "그룹관리" },
+  { href: "/mypage/subscription",  label: "구독관리" },
+  { href: "/mypage/notifications", label: "알림"     },
+  { href: "/mypage/inquiry",       label: "1:1문의"  },
+  { href: "/mypage/account",       label: "계정"     },
 ];
 
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, cb: () => void) {
@@ -36,27 +37,38 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, cb: () => voi
 }
 
 export function NavHeader({ member }: NavHeaderProps) {
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
 
-  const [supportOpen, setSupportOpen] = useState(false);
-  const [mypageOpen, setMypageOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileSupportOpen, setMobileSupportOpen] = useState(false);
-  const [mobileMypageOpen, setMobileMypageOpen] = useState(false);
+  const [supportOpen,      setSupportOpen]      = useState(false);
+  const [mypageOpen,       setMypageOpen]        = useState(false);
+  const [mobileOpen,       setMobileOpen]        = useState(false);
+  const [mobileSupportOpen,setMobileSupportOpen] = useState(false);
+  const [mobileMypageOpen, setMobileMypageOpen]  = useState(false);
+  const [unreadCount,      setUnreadCount]       = useState(0);
 
   const supportRef = useRef<HTMLDivElement>(null);
-  const mypageRef = useRef<HTMLDivElement>(null);
+  const mypageRef  = useRef<HTMLDivElement>(null);
 
   useClickOutside(supportRef, useCallback(() => setSupportOpen(false), []));
-  useClickOutside(mypageRef, useCallback(() => setMypageOpen(false), []));
+  useClickOutside(mypageRef,  useCallback(() => setMypageOpen(false),  []));
 
-  // 라우트 변경 시 모바일 메뉴 닫기
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  const isActive = (href: string) => pathname === href;
-  const isParentActive = (items: { href: string }[]) =>
-    items.some((i) => pathname.startsWith(i.href));
+  // 읽지 않은 알림 수 조회
+  useEffect(() => {
+    if (!member) return;
+    const fetchUnread = async () => {
+      const res = await fetch("/api/mypage/notifications");
+      if (!res.ok) return;
+      const data: { is_read: boolean }[] = await res.json();
+      setUnreadCount(data.filter((n) => !n.is_read).length);
+    };
+    fetchUnread();
+  }, [member, pathname]);
+
+  const isActive       = (href: string) => pathname === href;
+  const isParentActive = (items: { href: string }[]) => items.some((i) => pathname.startsWith(i.href));
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -86,9 +98,9 @@ export function NavHeader({ member }: NavHeaderProps) {
 
           {/* 데스크톱 네비게이션 */}
           <nav className="hidden md:flex items-center gap-0.5">
-            <Link href="/" className={navLinkClass(isActive("/"))}>홈</Link>
-            <Link href="/about" className={navLinkClass(isActive("/about"))}>서비스 소개</Link>
-            <Link href="/pricing" className={navLinkClass(isActive("/pricing"))}>요금제</Link>
+            <Link href="/"       className={navLinkClass(isActive("/"))}>홈</Link>
+            <Link href="/about"  className={navLinkClass(isActive("/about"))}>서비스 소개</Link>
+            <Link href="/pricing"className={navLinkClass(isActive("/pricing"))}>요금제</Link>
 
             {/* 고객지원 드롭다운 */}
             <div className="relative" ref={supportRef}>
@@ -124,6 +136,20 @@ export function NavHeader({ member }: NavHeaderProps) {
           <div className="hidden md:flex items-center gap-1.5">
             {member ? (
               <>
+                {/* 알림 벨 */}
+                <Link
+                  href="/mypage/notifications"
+                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="알림"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
+
                 {/* 마이페이지 드롭다운 */}
                 <div className="relative" ref={mypageRef}>
                   <button
@@ -143,13 +169,18 @@ export function NavHeader({ member }: NavHeaderProps) {
                           key={item.href}
                           href={item.href}
                           onClick={() => setMypageOpen(false)}
-                          className={`block px-4 py-2.5 text-sm transition-colors ${
+                          className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
                             isActive(item.href)
                               ? "text-blue-600 bg-blue-50 font-medium"
                               : "text-gray-700 hover:bg-gray-50"
                           }`}
                         >
                           {item.label}
+                          {item.href === "/mypage/notifications" && unreadCount > 0 && (
+                            <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       ))}
                     </div>
@@ -165,9 +196,7 @@ export function NavHeader({ member }: NavHeaderProps) {
               </>
             ) : (
               <>
-                <Link href="/login" className={navLinkClass(isActive("/login"))}>
-                  로그인
-                </Link>
+                <Link href="/login"    className={navLinkClass(isActive("/login"))}>로그인</Link>
                 <Link
                   href="/register"
                   className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -180,11 +209,14 @@ export function NavHeader({ member }: NavHeaderProps) {
 
           {/* 모바일 햄버거 */}
           <button
-            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors relative"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="메뉴"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {!mobileOpen && unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            )}
           </button>
         </div>
       </div>
@@ -193,8 +225,8 @@ export function NavHeader({ member }: NavHeaderProps) {
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white shadow-lg">
           <div className="px-4 py-3 space-y-1">
-            <Link href="/" className={`block ${navLinkClass(isActive("/"))}`}>홈</Link>
-            <Link href="/about" className={`block ${navLinkClass(isActive("/about"))}`}>서비스 소개</Link>
+            <Link href="/"        className={`block ${navLinkClass(isActive("/"))}`}>홈</Link>
+            <Link href="/about"   className={`block ${navLinkClass(isActive("/about"))}`}>서비스 소개</Link>
             <Link href="/pricing" className={`block ${navLinkClass(isActive("/pricing"))}`}>요금제</Link>
 
             {/* 고객지원 */}
@@ -221,7 +253,7 @@ export function NavHeader({ member }: NavHeaderProps) {
               )}
             </div>
 
-            {/* 마이페이지 (로그인 후) */}
+            {/* 마이페이지 */}
             {member && (
               <div>
                 <button
@@ -235,11 +267,16 @@ export function NavHeader({ member }: NavHeaderProps) {
                   <div className="ml-4 mt-1 space-y-1">
                     {MYPAGE_MENU.map((item) => (
                       <Link key={item.href} href={item.href}
-                        className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                           isActive(item.href) ? "text-blue-600 bg-blue-50 font-medium" : "text-gray-600 hover:bg-gray-50"
                         }`}
                       >
                         {item.label}
+                        {item.href === "/mypage/notifications" && unreadCount > 0 && (
+                          <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </Link>
                     ))}
                   </div>
@@ -255,7 +292,7 @@ export function NavHeader({ member }: NavHeaderProps) {
                 </button>
               ) : (
                 <>
-                  <Link href="/login" className={`block ${navLinkClass(isActive("/login"))}`}>로그인</Link>
+                  <Link href="/login"    className={`block ${navLinkClass(isActive("/login"))}`}>로그인</Link>
                   <Link href="/register"
                     className="block px-3 py-2 text-sm font-semibold text-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     회원가입
