@@ -5,8 +5,6 @@ Sentry.init({
   tracesSampleRate: 1.0,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
-  integrations: [
-    Sentry.replayIntegration(),
-  ],
+  integrations: [Sentry.replayIntegration()],
   enabled: process.env.NODE_ENV === "production",
 });
