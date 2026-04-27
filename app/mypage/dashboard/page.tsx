@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { MapPin, Users, Clock, Smartphone, ArrowRight } from "lucide-react";
+import { MapPin, Users, Clock, Smartphone, ArrowRight, User } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const member = await getSession();
   if (!member) redirect("/login");
-  if (member.member_type === "location") redirect("/mypage/account");
 
   // 그룹 멤버 수
   const { count: memberCount } = await supabaseAdmin
@@ -17,9 +16,9 @@ export default async function DashboardPage() {
     .select("id", { count: "exact", head: true })
     .eq("main_viewer_id", member.id);
 
-  // 내가 속한 그룹 (sub_viewer)
+  // 내가 속한 그룹 (sub_viewer / location)
   const { data: myGroup } =
-    member.member_type === "sub_viewer"
+    member.member_type === "sub_viewer" || member.member_type === "location"
       ? await supabaseAdmin
           .from("member_groups")
           .select("main_viewer_id, members(name, phone)")
@@ -78,6 +77,8 @@ export default async function DashboardPage() {
         <p className="text-gray-500 mt-1">
           {member.member_type === "main_viewer"
             ? "가족의 위치를 실시간으로 확인하세요."
+            : member.member_type === "location"
+            ? "내 위치를 그룹에 공유합니다."
             : "그룹 현황을 확인하세요."}
         </p>
       </div>
@@ -91,7 +92,9 @@ export default async function DashboardPage() {
           <div className="text-center">
             <p className="font-semibold text-gray-700">지도 준비 중</p>
             <p className="text-sm text-gray-500 mt-1">
-              카카오맵 실시간 위치는 Phase 4에서 제공됩니다.
+              {member.member_type === "location"
+                ? "GPS 위치 공유는 Phase 4에서 활성화됩니다."
+                : "카카오맵 실시간 위치는 Phase 4에서 제공됩니다."}
             </p>
           </div>
           {lastUpdated && (
@@ -104,64 +107,106 @@ export default async function DashboardPage() {
       </div>
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
+      {member.member_type === "location" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* 소속 그룹 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="font-semibold text-gray-700">소속 그룹</span>
             </div>
-            <span className="font-semibold text-gray-700">그룹 멤버</span>
+            <p className="text-xl font-bold text-gray-900">
+              {myGroup ? "참여 중" : "미참여"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {myGroup ? "위치 공유 활성화 대기 중" : "메인 뷰어의 초대를 기다려주세요"}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {member.member_type === "main_viewer"
-              ? (memberCount ?? 0)
-              : myGroup
-              ? 1
-              : 0}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            {member.member_type === "main_viewer"
-              ? (memberCount ?? 0) > 0
-                ? "명이 그룹에 참여 중"
-                : "그룹 멤버를 초대해주세요"
-              : myGroup
-              ? "그룹에 참여 중"
-              : "아직 그룹에 참여하지 않았습니다"}
-          </p>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-green-600" />
+          {/* 위치 공유 상태 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-green-600" />
+              </div>
+              <span className="font-semibold text-gray-700">위치 공유</span>
             </div>
-            <span className="font-semibold text-gray-700">활성 디바이스</span>
+            <p className="text-xl font-bold text-gray-400">준비 중</p>
+            <p className="text-xs text-gray-400 mt-1">GPS 기능은 Phase 4에서 활성화됩니다</p>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {member.member_type === "main_viewer" ? activeDeviceCount : "—"}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            {member.member_type === "main_viewer"
-              ? activeDeviceCount > 0
-                ? "대 켜짐"
-                : "켜진 디바이스 없음"
-              : "메인 뷰어만 조회 가능"}
-          </p>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Clock className="w-5 h-5 text-purple-600" />
+          {/* 계정 바로가기 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <User className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="font-semibold text-gray-700">계정</span>
             </div>
-            <span className="font-semibold text-gray-700">최근 업데이트</span>
+            <Link
+              href="/mypage/account"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline mt-1"
+            >
+              계정 관리 <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="text-xs text-gray-400 mt-1">프로필 및 위치 공유 설정</p>
           </div>
-          <p className="text-sm font-bold text-gray-900 leading-tight mt-1">
-            {lastUpdated ?? "—"}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">마지막 위치 수신 시각</p>
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* 그룹 멤버 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="font-semibold text-gray-700">그룹 멤버</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {member.member_type === "main_viewer" ? (memberCount ?? 0) : myGroup ? 1 : 0}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {member.member_type === "main_viewer"
+                ? (memberCount ?? 0) > 0 ? "명이 그룹에 참여 중" : "그룹 멤버를 초대해주세요"
+                : myGroup ? "그룹에 참여 중" : "아직 그룹에 참여하지 않았습니다"}
+            </p>
+          </div>
+
+          {/* 활성 디바이스 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-green-600" />
+              </div>
+              <span className="font-semibold text-gray-700">활성 디바이스</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {member.member_type === "main_viewer" ? activeDeviceCount : "—"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {member.member_type === "main_viewer"
+                ? activeDeviceCount > 0 ? "대 켜짐" : "켜진 디바이스 없음"
+                : "메인 뷰어만 조회 가능"}
+            </p>
+          </div>
+
+          {/* 최근 업데이트 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Clock className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="font-semibold text-gray-700">최근 업데이트</span>
+            </div>
+            <p className="text-sm font-bold text-gray-900 leading-tight mt-1">
+              {lastUpdated ?? "—"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">마지막 위치 수신 시각</p>
+          </div>
+        </div>
+      )}
 
       {/* 그룹 관련 배너 */}
       {member.member_type === "main_viewer" && !hasGroup && (
@@ -200,6 +245,40 @@ export default async function DashboardPage() {
             className="flex items-center gap-1 text-sm font-semibold text-amber-700 hover:underline whitespace-nowrap mt-0.5"
           >
             그룹 참여 <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
+      {/* 위치모드 배너 */}
+      {member.member_type === "location" && !hasGroup && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-green-900">아직 그룹에 참여하지 않았습니다</p>
+            <p className="text-sm text-green-700 mt-1">
+              메인 뷰어가 초대 코드를 발급해야 그룹에 참여할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      )}
+      {member.member_type === "location" && hasGroup && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-green-900">그룹에 참여 중입니다</p>
+            <p className="text-sm text-green-700 mt-1">
+              GPS 위치 공유 기능은 Phase 4에서 활성화됩니다.
+            </p>
+          </div>
+          <Link
+            href="/mypage/account"
+            className="flex items-center gap-1 text-sm font-semibold text-green-700 hover:underline whitespace-nowrap mt-0.5"
+          >
+            위치 공유 설정 <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       )}
