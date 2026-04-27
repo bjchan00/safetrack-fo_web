@@ -70,6 +70,10 @@ export function NavHeader({ member }: NavHeaderProps) {
   const isActive       = (href: string) => pathname === href;
   const isParentActive = (items: { href: string }[]) => items.some((i) => pathname.startsWith(i.href));
 
+  const mypageMenu = MYPAGE_MENU.filter((item) =>
+    item.href !== "/mypage/subscription" || member?.member_type === "main_viewer"
+  );
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
@@ -164,7 +168,7 @@ export function NavHeader({ member }: NavHeaderProps) {
                       <p className="px-4 py-2 text-xs text-gray-400 font-medium border-b border-gray-100">
                         마이페이지
                       </p>
-                      {MYPAGE_MENU.map((item) => (
+                      {mypageMenu.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}
@@ -265,7 +269,7 @@ export function NavHeader({ member }: NavHeaderProps) {
                 </button>
                 {mobileMypageOpen && (
                   <div className="ml-4 mt-1 space-y-1">
-                    {MYPAGE_MENU.map((item) => (
+                    {mypageMenu.map((item) => (
                       <Link key={item.href} href={item.href}
                         className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                           isActive(item.href) ? "text-blue-600 bg-blue-50 font-medium" : "text-gray-600 hover:bg-gray-50"

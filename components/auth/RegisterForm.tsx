@@ -149,8 +149,8 @@ function TermModal({ term, label, required, onClose, onAgree, agreed }: TermModa
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]">
         {/* 헤더 */}
-        <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
-          <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+          <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
             <FileText className="w-4.5 h-4.5 text-blue-600" size={18} />
           </div>
           <div className="flex-1 min-w-0">
@@ -371,7 +371,10 @@ export function RegisterForm() {
       const data = await res.json();
       if (data.success) {
         showToast("회원가입이 완료되었습니다!", "success");
-        setTimeout(() => router.push("/"), 800);
+        setTimeout(() => {
+          router.push("/mypage/dashboard");
+          router.refresh();
+        }, 800);
       } else {
         showToast(data.message || "회원가입에 실패했습니다.", "error");
       }
