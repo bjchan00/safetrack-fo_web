@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MapPin, Users, Navigation, CheckCircle, X, FileText, Loader2 } from "lucide-react";
+import { Eye, EyeOff, MapPin, Users, Navigation, CheckCircle, X, FileText, Loader2, Info } from "lucide-react";
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { showToast } from "@/components/ui/Toast";
 import {
@@ -232,6 +232,7 @@ export function RegisterForm() {
   const [smsCode, setSmsCode] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
   const [smsTimer, setSmsTimer] = useState(0);
+  const [devCode, setDevCode] = useState<string | null>(null);
 
   // Step 3
   const [memberType, setMemberType] = useState<MemberType | "">("");
@@ -321,7 +322,7 @@ export function RegisterForm() {
         setSmsSent(true);
         setSmsCode("");
         startTimer();
-        showToast(`[개발용] 인증번호: ${data.dev_code}`, "info");
+        if (data.dev_code) setDevCode(String(data.dev_code));
       } else {
         showToast(data.message || "SMS 발송에 실패했습니다.", "error");
       }
@@ -770,6 +771,35 @@ export function RegisterForm() {
           <a href="/login" className="text-blue-600 font-semibold hover:underline">로그인</a>
         </p>
       </div>
+
+      {/* ─── 개발용 인증번호 팝업 ─── */}
+      {devCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Info className="w-6 h-6 text-blue-600" />
+            </div>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">개발 모드 · 인증번호</p>
+            <p className="text-4xl font-bold text-gray-900 tracking-widest mb-1">{devCode}</p>
+            <p className="text-xs text-gray-400 mb-5">실제 SMS 연동 전 임시 표시입니다.</p>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(devCode).catch(() => {});
+                setDevCode(null);
+              }}
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              복사 후 닫기
+            </button>
+            <button
+              onClick={() => setDevCode(null)}
+              className="w-full mt-2 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── 약관 상세 팝업 ─── */}
       {termModalKey && activeModalItem && activeModalTerm && (
