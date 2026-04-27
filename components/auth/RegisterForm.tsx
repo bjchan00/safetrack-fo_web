@@ -142,10 +142,6 @@ function TermModal({ term, label, required, onClose, onAgree, agreed }: TermModa
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  const validPeriod = term.valid_from
-    ? `${term.valid_from.slice(0, 10)}${term.valid_until ? ` ~ ${term.valid_until.slice(0, 10)}` : " ~"}`
-    : null;
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -158,20 +154,7 @@ function TermModal({ term, label, required, onClose, onAgree, agreed }: TermModa
             <FileText className="w-4.5 h-4.5 text-blue-600" size={18} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-bold text-gray-900 leading-tight">{term.title}</h2>
-              {term.version && (
-                <span className="text-[10px] font-semibold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">
-                  v{term.version}
-                </span>
-              )}
-              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${required ? "bg-red-50 text-red-500" : "bg-gray-100 text-gray-500"}`}>
-                {required ? "필수" : "선택"}
-              </span>
-            </div>
-            {validPeriod && (
-              <p className="text-xs text-gray-400 mt-0.5">유효기간: {validPeriod}</p>
-            )}
+            <h2 className="text-base font-bold text-gray-900 leading-tight">{term.title}</h2>
           </div>
           <button
             onClick={onClose}
@@ -388,7 +371,7 @@ export function RegisterForm() {
       const data = await res.json();
       if (data.success) {
         showToast("회원가입이 완료되었습니다!", "success");
-        setTimeout(() => router.push("/dashboard"), 800);
+        setTimeout(() => router.push("/"), 800);
       } else {
         showToast(data.message || "회원가입에 실패했습니다.", "error");
       }
